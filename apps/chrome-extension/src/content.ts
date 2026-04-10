@@ -15,6 +15,10 @@ import { collectBatchDownloadSeed } from './common/batch-download-dom'
 
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
+const DEFAULT_BUTTON_SIZE = 36
+const DEFAULT_BUTTON_GAP = 14
+const DEFAULT_BUTTON_RIGHT = 24
+const DEFAULT_BUTTON_BOTTOM = 24
 
 let disposables: (() => void)[] = []
 
@@ -30,6 +34,11 @@ interface Button {
   element: HTMLElement
   width: number
   height: number
+}
+
+interface ButtonPosition {
+  right: number
+  bottom: number
 }
 
 const startBatchDownload = async (): Promise<void> => {
@@ -49,15 +58,7 @@ const startBatchDownload = async (): Promise<void> => {
 const initButtons = (): void => {
   const root = document.body
 
-  const isReady = () => {
-    // Comment button may not be displayed
-    for (const selector of [HELP_BLOCK_CLASS]) {
-      if (!root.querySelector(selector)) {
-        return false
-      }
-    }
-    return true
-  }
+  const isReady = () => root.isConnected
 
   const render = () => {
     const style = document.createElement('style')
@@ -168,23 +169,50 @@ const initButtons = (): void => {
       }
     })
 
-    const getOriginalBtnPos = (buttons: Button[]) => {
+    const getDefaultBtnPos = (buttons: Button[]): ButtonPosition[] =>
+      buttons.map((_, index) => ({
+        right: DEFAULT_BUTTON_RIGHT,
+        bottom:
+          DEFAULT_BUTTON_BOTTOM +
+          index * (DEFAULT_BUTTON_GAP + DEFAULT_BUTTON_SIZE),
+      }))
+
+    const getOriginalBtnPos = (buttons: Button[]): ButtonPosition[] => {
       const helpBlock: HTMLDivElement | null =
         root.querySelector(HELP_BLOCK_CLASS)
-      if (!helpBlock) {
-        return
+      const commentButton: HTMLDivElement | null =
+        root.querySelector(COMMENT_BUTTON_CLASS)
+
+      if (!helpBlock && !commentButton) {
+        return getDefaultBtnPos(buttons)
       }
 
       const windowWidth = window.innerWidth
       const windowHeight = window.innerHeight
+      const defaultBtnHeight = DEFAULT_BUTTON_SIZE
+      const defaultGap = DEFAULT_BUTTON_GAP
+
+      if (!helpBlock) {
+        const commentButtonRect = commentButton?.getBoundingClientRect()
+
+        if (!commentButtonRect) {
+          return getDefaultBtnPos(buttons)
+        }
+
+        const initialBottom = Math.max(
+          windowHeight - commentButtonRect.bottom,
+          DEFAULT_BUTTON_BOTTOM,
+        )
+
+        return buttons.map((_, index) => ({
+          right: windowWidth - commentButtonRect.right,
+          bottom:
+            initialBottom +
+            (index + 1) * (defaultGap + commentButtonRect.height),
+        }))
+      }
 
       const helpBlockRect = helpBlock.getBoundingClientRect()
-
-      const commentButton: HTMLDivElement | null =
-        root.querySelector(COMMENT_BUTTON_CLASS)
-
-      const defaultBtnHeight = 36
-      const defaultGap = 14
 
       // Comment button may not be displayed
       if (!commentButton) {
@@ -240,12 +268,11 @@ const initButtons = (): void => {
           .flat(1)
       }
 
-      return
+      return getDefaultBtnPos(buttons)
     }
 
     const layout = (buttons: Button[]) => {
       const pos = getOriginalBtnPos(buttons)
-      if (!pos) return
 
       buttons.forEach((button, index) => {
         button.element.style.right = pos[index].right.toFixed() + 'px'
@@ -284,8 +311,15 @@ const initButtons = (): void => {
       root.appendChild(button.element)
     })
 
+    const handleResize = () => {
+      layout(buttons)
+    }
+
+    window.addEventListener('resize', handleResize)
+
     const unmount = () => {
       autoLayoutObserver.disconnect()
+      window.removeEventListener('resize', handleResize)
 
       buttons.forEach(button => {
         if (root.contains(button.element)) {
@@ -326,6 +360,7 @@ const initButtons = (): void => {
             isReady()
           ) {
             init()
+            return
           }
         }
       }
