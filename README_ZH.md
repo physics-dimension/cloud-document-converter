@@ -1,88 +1,85 @@
 <p align="center">
   <p align="center">
-   <img width="150" height="150" src="apps/chrome-extension/design/logo.svg" alt="Logo">
+    <img width="150" height="150" src="apps/chrome-extension/design/logo.svg" alt="Logo">
   </p>
-	<h1 align="center"><b>Cloud Document Converter</b></h1>
+  <h1 align="center"><b>Cloud Document Converter</b></h1>
 </p>
 
-Cloud Document Converter 是一个浏览器扩展， 支持下载、复制飞书云文档为 Markdown。
+Cloud Document Converter 是一个把飞书 / Lark 云文档导出为 Markdown 的浏览器扩展。
 
-[English](./README.md) · **简体中文**
+这个仓库基于 [whale4113/cloud-document-converter](https://github.com/whale4113/cloud-document-converter) fork，并在此基础上增强了批量导出知识库子文档的工作流。
 
-# 安装
+[English](./README.md)
 
-从 [Chrome 应用商店](https://chromewebstore.google.com/detail/cloud-document-converter/ehkomhhcinhikfddnmklbloahaakploh)、[Microsoft Edge 加载项](https://microsoftedge.microsoft.com/addons/detail/pcjebkebnehplnpkpnhipagefaffiopp) 和 [Firefox 附加组件](https://addons.mozilla.org/addon/cloud-document-converter) 安装 Cloud Document Converter。
+## 这个 Fork 增加了什么
 
-# 功能
+- 支持批量下载当前飞书知识库页面下的子文档
+- 批量下载前可勾选页面，并支持搜索过滤
+- 支持批量并发设置：`1`、`2`、`3`、`5`
+- 支持 `Fast` 和 `Complete` 两种批量模式
+- 批量下载默认包含图片和附件
+- 页面右侧悬浮按钮和扩展弹窗里都提供批量下载入口
 
-- 下载飞书云文档为 Markdown
+## 核心能力
 
-- 复制飞书云文档为 Markdown
+- 将当前飞书 / Lark 文档下载为 Markdown
+- 将当前文档复制为 Markdown
+- 先预览 Markdown，再决定是否保存
+- 将子文档批量导出为单独的 Markdown 或 ZIP 文件
 
-  > ❗注意: 通过这种方式生成的图像 URL 只有两个小时的访问时间。这意味着两小时后，将无法再访问图像资源。
+## 批量导出流程
 
-# 兼容性
+1. 打开飞书知识库页面或目录型文档页面
+2. 点击 `Download descendants as Markdown`
+3. 在批量页里查看采集到的子页面
+4. 勾选需要导出的页面
+5. 设置并发数和导出模式
+6. 开始批量下载
 
-## 块级元素
+说明：
 
-| **飞书云文档**        | **支持情况** | **Markdown**                      |
-| --------------------- | ------------ | --------------------------------- |
-| 分割线                | ✅            | Thematic Break                    |
-| 标题 (一级至六级)     | ✅            | ATX Headings (Level 1 to level 6) |
-| 标题 (七级至九级)     | ✅            | Paragraph                         |
-| 代码块                | ✅            | Code Block                        |
-| 引用                  | ✅            | Blockquote                        |
-| 无序列表              | ✅            | Bullet list                       |
-| 有序列表              | ✅            | Ordered list                      |
-| 任务列表              | ✅            | Task list                         |
-| 表格                  | ✅            | Table                             |
-| 图片                  | ✅            | Image                             |
-| 公示                  | ✅            | Math Block                        |
-| 高亮块                | ❌            | Blockquote                        |
-| 引用块                | ✅            |                                   |
-| 图表 (流程图、UML 图) | ❌            | Image（仅下载支持）               |
-| 分栏                  | ✅            | Flatten/Table/HTML               |
-| 多维表格              | 待定         |                                   |
-| 群名片                | 待定         |                                   |
-| 文件                  | ❌            | Link（仅下载支持）                |
-| 内嵌网页              | ✅            | HTML                              |
-| 小组件                | 待定         | 文本绘图 -> Code Block ✅          |
-| 思维笔记              | 待定         |                                   |
-| 电子表格              | 待定         |                                   |
+- `Fast` 模式不会强制整页预加载，更适合大批量快速导出
+- `Complete` 模式会等待页面尽量加载完整后再导出
+- 含图片或附件的页面会按单页 ZIP 下载
+- 纯文本页面会直接下载为 `.md`
 
-## 行内元素
+## 从源码安装
 
-| **飞书云文档** | **支持情况** | **Markdown** |
-| -------------- | ------------ | ------------ |
-| 加粗           | ✅            | Bold         |
-| 删除线         | ✅            | Delete       |
-| 倾斜           | ✅            | Italic       |
-| 行内代码       | ✅            | Inline Code  |
-| 链接           | ✅            | Link         |
-| 字体颜色       | ✅            | HTML         |
-| 字体背景色     | ✅            | HTML         |
-| 下划线        | ✅            | HTML (`<u>`) |
+这个 fork 目前更适合以“已解压扩展”的方式加载。
 
-## 其它
+```bash
+pnpm install
+pnpm build
+```
 
-- 缩进和对齐：待定
+然后在浏览器里加载这个目录：
 
-# 贡献
+```text
+apps/chrome-extension/dist
+```
 
-如果你有兴趣修复问题并直接为代码库做出贡献，请参阅文档 [如何贡献](./contributing.md)。
+Chrome / Edge 操作步骤：
 
-# 支持我
+1. 打开 `chrome://extensions/` 或 `edge://extensions/`
+2. 开启“开发者模式”
+3. 点击“加载已解压的扩展程序”
+4. 选择 `apps/chrome-extension/dist`
 
-如果你喜欢这个项目，欢迎你请我喝杯咖啡！你的支持将帮助我继续改进和维护这个项目。
+## 开发与验证
 
-[请我喝咖啡 ☕](https://lujunji.vercel.app/about)
+```bash
+pnpm test
+pnpm build
+```
 
-# 免责声明
+## 兼容性
 
-本项目（以下简称“项目”）仅供参考和学习使用。作者尽力确保项目的准确性和可靠性，但不提供任何明示或暗示的保证，包括但不限于对项目的适销性、特定用途的适用性或无侵权的保证。
+Markdown 转换能力继承自上游项目，这个 fork 主要增强的是飞书知识库子文档的批量导出体验。
 
-作者不对因使用本项目而产生的任何直接、间接、偶然、特殊、惩罚性或结果性损害承担任何责任，包括但不限于因使用、误用、或依赖项目中的信息而导致的利润损失、业务中断或数据丢失。
+## 上游项目
 
-本项目中的所有内容均基于作者的个人见解和经验，不代表任何组织或公司的观点。
+- 原项目：[whale4113/cloud-document-converter](https://github.com/whale4113/cloud-document-converter)
 
-使用者应自行承担使用本项目所产生的一切风险。在任何情况下，作者均不对使用本项目而导致的任何损失或损害承担责任。
+## 免责声明
+
+本项目仅供学习、研究和效率工具场景使用。请自行评估风险，并确保使用方式符合你所在组织的规范以及目标平台的相关条款。

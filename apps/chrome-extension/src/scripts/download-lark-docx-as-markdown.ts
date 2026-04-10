@@ -17,6 +17,8 @@ import {
 } from '../common/utils'
 import { getSettings, Grid } from '../common/settings'
 import { DownloadMethod, SettingKey } from '@/common/settings'
+import { batchPageDownloadRequestDatasetKey } from '@/common/batch-download'
+import { EventName, portImpl } from '@/common/message'
 
 const uniqueFileName = new UniqueFileName()
 
@@ -41,6 +43,10 @@ const enum TranslationKey {
 enum ToastKey {
   DOWNLOADING = 'downloading',
   REPORT_BUG = 'report_bug',
+}
+
+interface BatchPageDownloadRequest {
+  requestId: string
 }
 
 i18next
@@ -100,6 +106,45 @@ i18next
 interface ProgressOptions {
   onProgress?: (progress: number) => void
   onComplete?: () => void
+}
+
+const evaluateBatchPageDownloadRequest =
+  (): BatchPageDownloadRequest | null => {
+    const raw =
+      document.documentElement.dataset[batchPageDownloadRequestDatasetKey]
+    if (!raw) {
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<BatchPageDownloadRequest>
+      if (!parsed.requestId) {
+        throw new Error('Missing request id')
+      }
+
+      return {
+        requestId: parsed.requestId,
+      }
+    } catch (error) {
+      console.error(error)
+      return null
+    }
+  }
+
+const notifyBatchPageDownloadResult = (
+  request: BatchPageDownloadRequest | null,
+  payload: {
+    error?: string
+  } = {},
+) => {
+  if (!request) {
+    return
+  }
+
+  portImpl.sender.send(EventName.BatchPageDownloadResult, {
+    requestId: request.requestId,
+    ...payload,
+  })
 }
 
 async function toBlob(
@@ -520,6 +565,7 @@ const prepare = async (): Promise<PrepareResult> => {
 
 const main = async (options: { signal?: AbortSignal } = {}) => {
   const { signal } = options
+  const batchRequest = evaluateBatchPageDownloadRequest()
 
   if (docx.isDoc) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT_DOC_1_0) })
@@ -550,6 +596,10 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     SettingKey.TextHighlight,
     SettingKey.DownloadFileWithUniqueName,
   ])
+
+  if (batchRequest) {
+    settings[SettingKey.DownloadMethod] = DownloadMethod.Direct
+  }
 
   const { root, images, files, tableWithParents, mentionUsers } =
     docx.intoMarkdownAST({
@@ -678,6 +728,8 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
       fileName: filename,
     })
   }
+
+  notifyBatchPageDownloadResult(batchRequest)
 }
 
 let controller = new AbortController()
@@ -711,9 +763,17 @@ main({
         },
       })
     }
+
+    notifyBatchPageDownloadResult(evaluateBatchPageDownloadRequest(), {
+      error: error instanceof Error ? error.message : String(error),
+    })
   })
   .finally(() => {
     Toast.remove(ToastKey.DOWNLOADING)
+    Reflect.deleteProperty(
+      document.documentElement.dataset,
+      batchPageDownloadRequestDatasetKey,
+    )
 
     // @ts-expect-error remove reference
     controller = null

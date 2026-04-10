@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       input: {
+        batch: resolve(__dirname, 'batch.html'),
         options: resolve(__dirname, 'options.html'),
         popup: resolve(__dirname, 'popup.html'),
       },

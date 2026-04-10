@@ -1,4 +1,7 @@
-import { type Message } from './common/message'
+import {
+  type OpenBatchPageMessage,
+  type RuntimeMessage,
+} from './common/message'
 
 const sharedDocumentUrlPatterns: string[] = [
   'https://*.feishu.cn/*',
@@ -73,9 +76,26 @@ chrome.contextMenus.onClicked.addListener(({ menuItemId }, tab) => {
 })
 
 chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
-  const message = _message as Message
+  const message = _message as RuntimeMessage
 
   const executeScript = async () => {
+    if (message.type === 'open_batch_download_page') {
+      const batchPageMessage = message as OpenBatchPageMessage
+
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL(
+          `pages/batch.html?taskId=${batchPageMessage.taskId}`,
+        ),
+        active: true,
+      })
+
+      return
+    }
+
+    if (!('flag' in message)) {
+      return
+    }
+
     const activeTabs = await chrome.tabs.query({
       currentWindow: true,
       active: true,

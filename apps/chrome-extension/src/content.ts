@@ -1,5 +1,17 @@
 import { chunk } from 'es-toolkit/array'
-import { EventName, portImpl } from './common/message'
+import {
+  EventName,
+  portImpl,
+  type PrepareBatchPageDownloadMessage,
+  type PrepareBatchExportMessage,
+  type RuntimeMessage,
+} from './common/message'
+import {
+  batchPageDownloadRequestDatasetKey,
+  batchRequestDatasetKey,
+  batchTaskSeedKey,
+} from './common/batch-download'
+import { collectBatchDownloadSeed } from './common/batch-download-dom'
 
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
@@ -18,6 +30,20 @@ interface Button {
   element: HTMLElement
   width: number
   height: number
+}
+
+const startBatchDownload = async (): Promise<void> => {
+  const seed = await collectBatchDownloadSeed()
+  const taskId = crypto.randomUUID()
+
+  await chrome.storage.local.set({
+    [batchTaskSeedKey(taskId)]: seed,
+  })
+
+  await chrome.runtime.sendMessage({
+    type: 'open_batch_download_page',
+    taskId,
+  })
 }
 
 const initButtons = (): void => {
@@ -104,6 +130,22 @@ const initButtons = (): void => {
           chrome.runtime
             .sendMessage({ flag: 'download_docx_as_markdown' })
             .catch(console.error)
+        },
+      },
+      {
+        type: 'batch-download',
+        innerHtml: `<svg aria-hidden="true" focusable="false" role="img" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+        <path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v2.5C0 6.216.784 7 1.75 7h2.5C5.216 7 6 6.216 6 5.25v-2.5A1.75 1.75 0 0 0 4.25 1h-2.5Zm0 1.5h2.5a.25.25 0 0 1 .25.25v2.5a.25.25 0 0 1-.25.25h-2.5a.25.25 0 0 1-.25-.25v-2.5a.25.25 0 0 1 .25-.25Zm10 0A1.75 1.75 0 0 1 16 2.75v2.5A1.75 1.75 0 0 1 14.25 7h-2.5A1.75 1.75 0 0 1 10 5.25v-2.5A1.75 1.75 0 0 1 11.75 1h2.5Zm0 1.5h2.5a.25.25 0 0 1 .25.25v2.5a.25.25 0 0 1-.25.25h-2.5a.25.25 0 0 1-.25-.25v-2.5a.25.25 0 0 1 .25-.25Zm-10 7A1.75 1.75 0 0 0 0 12.75v2.5C0 16.216.784 17 1.75 17h2.5C5.216 17 6 16.216 6 15.25v-2.5A1.75 1.75 0 0 0 4.25 11h-2.5Zm0 1.5h2.5a.25.25 0 0 1 .25.25v2.5a.25.25 0 0 1-.25.25h-2.5a.25.25 0 0 1-.25-.25v-2.5a.25.25 0 0 1 .25-.25Zm7.53-1.28a.75.75 0 0 1 1.06 0l1.16 1.16V10.75a.75.75 0 0 1 1.5 0v1.63l1.16-1.16a.75.75 0 1 1 1.06 1.06l-2.44 2.44a.75.75 0 0 1-1.06 0l-2.44-2.44a.75.75 0 0 1 0-1.06ZM10.75 15a.75.75 0 0 1 .75.75v.75h2.75a.75.75 0 0 1 0 1.5H11.5v.75a.75.75 0 0 1-1.5 0v-.75H7.25a.75.75 0 0 1 0-1.5H10v-.75a.75.75 0 0 1 .75-.75Z" transform="translate(0 -1)"></path>
+        </svg>`,
+        action: () => {
+          startBatchDownload().catch((error: unknown) => {
+            console.error(error)
+            window.alert(
+              error instanceof Error
+                ? error.message
+                : 'Failed to start batch download',
+            )
+          })
         },
       },
     ]
@@ -327,6 +369,73 @@ urlChangeObserver.observe(document.body, { childList: true })
 
 portImpl.receiver.on(EventName.GetSettings, async keys => {
   return await chrome.storage.sync.get(keys)
+})
+
+portImpl.receiver.on(EventName.BatchExportResult, async result => {
+  await chrome.runtime.sendMessage({
+    type: 'batch_export_result',
+    ...result,
+  })
+})
+
+portImpl.receiver.on(EventName.BatchPageDownloadResult, async result => {
+  await chrome.runtime.sendMessage({
+    type: 'batch_page_download_result',
+    ...result,
+  })
+})
+
+chrome.runtime.onMessage.addListener((rawMessage, _sender, sendResponse) => {
+  const message = rawMessage as RuntimeMessage
+
+  if (message.type === 'start_batch_download') {
+    startBatchDownload()
+      .then(() => {
+        sendResponse({
+          ok: true,
+        })
+      })
+      .catch((error: unknown) => {
+        console.error(error)
+        sendResponse({
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to start batch download',
+        })
+      })
+
+    return true
+  }
+
+  if (message.type === 'prepare_batch_export') {
+    document.documentElement.dataset[batchRequestDatasetKey] = JSON.stringify({
+      requestId: (message as PrepareBatchExportMessage).requestId,
+      mode: (message as PrepareBatchExportMessage).mode,
+    })
+
+    sendResponse({
+      ok: true,
+    })
+
+    return true
+  }
+
+  if (message.type === 'prepare_batch_page_download') {
+    document.documentElement.dataset[batchPageDownloadRequestDatasetKey] =
+      JSON.stringify({
+        requestId: (message as PrepareBatchPageDownloadMessage).requestId,
+      })
+
+    sendResponse({
+      ok: true,
+    })
+
+    return true
+  }
+
+  return false
 })
 
 if (import.meta.env.DEV) {

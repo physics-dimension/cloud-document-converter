@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { Eye, Copy, Download, Info, Settings } from 'lucide-vue-next'
+import {
+  Eye,
+  Copy,
+  Download,
+  FolderTree,
+  Info,
+  Settings,
+} from 'lucide-vue-next'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { Flag } from '@/common/message'
+import { Flag, type StartBatchDownloadMessage } from '@/common/message'
 import { useInitLocale } from '../shared/i18n'
 import { useInitTheme } from '../shared/theme'
 
@@ -21,6 +28,39 @@ const handleMessage = async (flag: Flag) => {
   }
 
   window.close()
+}
+
+const handleBatchDownload = async () => {
+  try {
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    })
+
+    if (activeTab?.id === undefined) {
+      throw new Error('No active tab was found')
+    }
+
+    const response = (await chrome.tabs.sendMessage(activeTab.id, {
+      type: 'start_batch_download',
+    } satisfies StartBatchDownloadMessage)) as
+      | { ok?: boolean; error?: string }
+      | undefined
+
+    if (response?.ok === false) {
+      throw new Error(response.error ?? 'Failed to start batch download')
+    }
+
+    window.close()
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to start batch download'
+    const tip = message.includes('Receiving end does not exist')
+      ? 'The page needs to be refreshed after reloading the extension.'
+      : message
+
+    window.alert(tip)
+  }
 }
 
 const handleOpenOptionsPage = () => {
@@ -48,6 +88,10 @@ const handleOpenOptionsPage = () => {
       >
         <Download />
         {{ t('lark.docx.download') }}
+      </DropdownMenuItem>
+      <DropdownMenuItem @select="handleBatchDownload">
+        <FolderTree />
+        {{ t('lark.docx.batch_download') }}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
