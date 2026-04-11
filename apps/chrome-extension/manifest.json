@@ -20,6 +20,8 @@
   "options_page": "pages/options.html",
   "permissions": ["contextMenus", "downloads", "scripting", "storage", "tabs"],
   "host_permissions": [
+    "https://aipoju.com/*",
+    "https://*.aipoju.com/*",
     "https://*.feishu.cn/*",
     "https://*.feishu.net/*",
     "https://*.larksuite.com/*",
@@ -30,6 +32,8 @@
   "content_scripts": [
     {
       "matches": [
+        "https://aipoju.com/*",
+        "https://*.aipoju.com/*",
         "https://*.feishu.cn/*",
         "https://*.feishu.net/*",
         "https://*.larksuite.com/*",

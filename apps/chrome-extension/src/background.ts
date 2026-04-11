@@ -4,6 +4,8 @@ import {
 } from './common/message'
 
 const sharedDocumentUrlPatterns: string[] = [
+  'https://aipoju.com/*',
+  'https://*.aipoju.com/*',
   'https://*.feishu.cn/*',
   'https://*.feishu.net/*',
   'https://*.larksuite.com/*',
@@ -46,21 +48,21 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
     case MenuItemId.DOWNLOAD_DOCX_AS_MARKDOWN:
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/download-lark-docx-as-markdown.js'],
-        target: { tabId },
+        target: { tabId, allFrames: true },
         world: 'MAIN',
       })
       break
     case MenuItemId.COPY_DOCX_AS_MARKDOWN:
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/copy-lark-docx-as-markdown.js'],
-        target: { tabId },
+        target: { tabId, allFrames: true },
         world: 'MAIN',
       })
       break
     case MenuItemId.VIEW_DOCX_AS_MARKDOWN:
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/view-lark-docx-as-markdown.js'],
-        target: { tabId },
+        target: { tabId, allFrames: true },
         world: 'MAIN',
       })
       break

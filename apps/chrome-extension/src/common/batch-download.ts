@@ -79,6 +79,7 @@ export const isDocLikePath = (pathname: string): boolean =>
   /^\/(wiki|docx)\//.test(pathname)
 
 const supportedDocHostSuffixes = [
+  '.aipoju.com',
   '.feishu.cn',
   '.feishu.net',
   '.larksuite.com',
